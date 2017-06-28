@@ -1,0 +1,114 @@
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
+
+import javax.crypto.Cipher;
+import java.io.IOException;
+import java.security.*;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+
+/**
+ * Create by qiang.hu
+ * Date :  2017/6/28
+ * Time :  下午4:28
+ * desc :
+ */
+public class RSAUtil {
+
+    // 指定加密算法为RSA
+    private static final String ALGORITHM = "RSA";
+    //密钥长度，用来初始化
+    private static final int KEYSIZE = 1024;
+    //随机数源
+    private static final SecureRandom secureRandom = new SecureRandom();
+    private static KeyPairGenerator keyPairGenerator = null;
+    private static KeyPair keyPair = null;
+
+    static {
+        try {
+            keyPairGenerator = KeyPairGenerator.getInstance(ALGORITHM);
+            keyPairGenerator.initialize(KEYSIZE, secureRandom);
+            keyPair = keyPairGenerator.generateKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //私钥
+    public static String genPublicKey() {
+
+        Key publicKey = keyPair.getPublic();
+        byte[] publicKeyBytes = publicKey.getEncoded();
+        return new String(new BASE64Encoder().encodeBuffer(publicKeyBytes));
+    }
+
+    //公钥
+    public static String genPrivateKey() {
+        Key privateKey = keyPair.getPrivate();
+        byte[] privateKeyBytes = privateKey.getEncoded();
+        return new String(new BASE64Encoder().encodeBuffer(privateKeyBytes));
+    }
+
+    //公钥加密
+    public static byte[] encodeByPublicKey(byte[] data, String key) throws Exception {
+        //对公钥解密
+        byte[] keyBytes = decodeBASE64(key);
+        //取公钥
+        X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(keyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+        Key publicKey = keyFactory.generatePublic(x509EncodedKeySpec);
+        //对数据解密
+        Cipher cipher = Cipher.getInstance(keyFactory.getAlgorithm());
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        return cipher.doFinal(data);
+    }
+
+    //公钥解密
+    public static byte[] decryptByPublicKey(byte[] data, String key) throws Exception {
+        //对私钥解密
+        byte[] keyBytes = decodeBASE64(key);
+        X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(keyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+        Key publicKey = keyFactory.generatePublic(x509EncodedKeySpec);
+
+        //对数据解密
+        Cipher cipher = Cipher.getInstance(keyFactory.getAlgorithm());
+        cipher.init(Cipher.DECRYPT_MODE, publicKey);
+        return cipher.doFinal(data);
+    }
+
+    //私钥解密
+    public static byte[] decodeByPrivateKey(byte[] data, String key) throws Exception {
+        //对私钥解密
+        byte[] keyBytes = decodeBASE64(key);
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+        Key privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+        //对数据解密
+        Cipher cipher = Cipher.getInstance(keyFactory.getAlgorithm());
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        return cipher.doFinal(data);
+    }
+
+    public static byte[] decryptByPrivateKey(byte[] data, String key) throws Exception {
+        //对私钥解密
+        byte[] keyBytes = decodeBASE64(key);
+
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+        Key privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+        //对数据解密
+        Cipher cipher = Cipher.getInstance(keyFactory.getAlgorithm());
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+
+        return cipher.doFinal(data);
+    }
+
+    //BASE64解码
+    public static byte[] decodeBASE64(String key) throws IOException {
+        return new BASE64Decoder().decodeBuffer(key);
+
+    }
+
+
+}
